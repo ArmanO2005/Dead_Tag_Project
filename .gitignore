@@ -1,0 +1,6 @@
+#folders
+data/*
+output/*
+
+#files
+credentials.json

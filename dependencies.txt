@@ -1,0 +1,5 @@
+pandas
+numpy
+nltk
+
+//BK_Tree is a rust module. It can be found on my github. Use maturin/pyo3 to develop it in a virtual environment then use that same virtual environment for the interpreter of this project
