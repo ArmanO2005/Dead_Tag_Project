@@ -233,14 +233,28 @@ def __EditDistanceLoc(location):
     return Score.iloc[0,0], location.find('(') != -1
 
 
+def punctStrip(text):
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    return text.strip()
+
+def detectCultivar(text):
+    pattern = r'^\S+\s+([A-Z]+)\b'
+    match = re.search(pattern, text)
+    if match:
+        return True
+    return False
+
+
 def sortOutput(list):
     if list:
         list.sort(key=lambda x: x[1])
     return list
 
-
 def strip(csvTemplatePath):
     temp = pd.read_csv(csvTemplatePath)
     stripped = pd.DataFrame(columns=temp.iloc[6, 1:len(temp.columns)])
     return stripped
+
+
+print(detectCultivar("Rhododendron 'PRINCESS ALEXANDRA"))
 
