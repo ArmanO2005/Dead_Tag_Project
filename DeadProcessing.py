@@ -234,7 +234,7 @@ def __EditDistanceLoc(location):
 
 
 def punctStrip(text):
-    text = text.translate(str.maketrans('', '', string.punctuation))
+    text = text.translate(str.maketrans('', '', string.punctuation + '1234567890'))
     return text.strip()
 
 def detectCultivar(text):
@@ -255,6 +255,4 @@ def strip(csvTemplatePath):
     stripped = pd.DataFrame(columns=temp.iloc[6, 1:len(temp.columns)])
     return stripped
 
-
-print(detectCultivar("Rhododendron 'PRINCESS ALEXANDRA"))
 
