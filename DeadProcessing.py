@@ -85,6 +85,7 @@ collectorFrequency.set_index(0, inplace=True)
 
 
 def __reformatCol(collector):
+
     collector = collector.strip()
     collector = re.sub(r'^[A-Za-z]{2}\.\s+', '', collector)
 
@@ -129,6 +130,9 @@ def __reformatCol(collector):
 
 
 def __EditDistanceCol(collector):
+    if not collector:
+        return None
+
     collector = __reformatCol(collector)
     wordsInCollector = collector.lower().replace(',','').replace('.','').replace('  ', ' ').split()
 
@@ -159,6 +163,9 @@ def __EditDistanceCol(collector):
         'string' : filtered_df['0'], 
         'stripped_string' : filtered_df['strippedCollector'], 
         'score' : filtered_df['strippedCollector'].apply(lambda x : (edit_distance(str(x), collector) / containsAllWords(x)) * frequency(x))})
+    
+    if Score.empty:
+        return None
 
     Score['score'] = Score.apply(lambda x : (x['score']), axis=1)
 
@@ -181,7 +188,7 @@ def MatchLocation(data, columnName):
     ***Contains_Paren: whether the location contains a parenthesis
     """
 
-    data[["***DbPlaceGuess", "***Contains_Paren"]] = data[columnName].apply(lambda x : __EditDistanceLoc(str(x), placeNames)).apply(pd.Series)
+    data[["***DbPlaceGuess", "***Contains_Paren"]] = data[columnName].apply(lambda x : __EditDistanceLoc(str(x))).apply(pd.Series)
 
 
 placeNames = pd.read_csv("data/PlaceName.csv")
@@ -191,6 +198,10 @@ def __EditDistanceLoc(location):
     """
     helper function for MatchLocation
     """
+
+    if not location:
+        return (None, False)
+
     continentList = ['africa', 'antarctica', 'asia', 'australia', 'europe', 'north america', 'south america']
 
     location = location.lower().replace('calif', 'california')
@@ -222,6 +233,9 @@ def __EditDistanceLoc(location):
 
     filtered_df = placeNamesCopy[placeNamesCopy['strippedLoc'].apply(lambda x : containsWords(str(x)))]
 
+    if filtered_df.empty:
+        return (None, location.find('(') != -1)
+
     Score = pd.DataFrame({
         'string' : filtered_df['0'], 
         'stripped_string' : filtered_df['strippedLoc'], 
@@ -230,7 +244,7 @@ def __EditDistanceLoc(location):
     Score['score'] = Score.apply(lambda x : x['score']/containsAllWords(x['stripped_string']), axis=1)
 
     Score = Score.sort_values(by='score')
-    return Score.iloc[0,0], location.find('(') != -1
+    return (Score.iloc[0, 0], location.find('(') != -1)
 
 
 def punctStrip(text):
