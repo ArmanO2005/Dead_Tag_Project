@@ -74,7 +74,7 @@ def MatchCollector(data, columnName):
     Modifies the dataframe data to contain one new columns:
     ***DbCollectorGuess: the most similar collector name in the database based on EditDistanceCol
     """
-    data['***DbCollectorGuess'] = data[columnName].apply(lambda x : __EditDistanceCol(str(x)))
+    data['***DbCollectorGuess'] = data[columnName].apply(lambda x : _EditDistanceCol(str(x)))
 
 
 collectorNames = pd.read_csv("data/Collectors.csv")
@@ -84,7 +84,7 @@ collectorFrequency[0] = collectorFrequency[0].replace('&amp;', '&')
 collectorFrequency.set_index(0, inplace=True)
 
 
-def __reformatCol(collector):
+def reformatCol(collector):
 
     collector = collector.strip()
     collector = re.sub(r'^[A-Za-z]{2}\.\s+', '', collector)
@@ -129,11 +129,11 @@ def __reformatCol(collector):
     # return collector
 
 
-def __EditDistanceCol(collector):
+def _EditDistanceCol(collector):
     if not collector:
         return None
 
-    collector = __reformatCol(collector)
+    collector = reformatCol(collector)
     wordsInCollector = collector.lower().replace(',','').replace('.','').replace('  ', ' ').split()
 
     def containsWords(target):
@@ -188,13 +188,13 @@ def MatchLocation(data, columnName):
     ***Contains_Paren: whether the location contains a parenthesis
     """
 
-    data[["***DbPlaceGuess", "***Contains_Paren"]] = data[columnName].apply(lambda x : __EditDistanceLoc(str(x))).apply(pd.Series)
+    data[["***DbPlaceGuess", "***Contains_Paren"]] = data[columnName].apply(lambda x : _EditDistanceLoc(str(x))).apply(pd.Series)
 
 
 placeNames = pd.read_csv("data/PlaceName.csv")
 placeNames['strippedLoc'] = placeNames['0'].str.lower().str.replace(',','').str.replace('.','').str.replace('  ', ' ')
 
-def __EditDistanceLoc(location):
+def _EditDistanceLoc(location):
     """
     helper function for MatchLocation
     """
@@ -268,5 +268,3 @@ def strip(csvTemplatePath):
     temp = pd.read_csv(csvTemplatePath)
     stripped = pd.DataFrame(columns=temp.iloc[6, 1:len(temp.columns)])
     return stripped
-
-
