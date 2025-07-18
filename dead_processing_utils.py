@@ -234,7 +234,7 @@ def _EditDistanceLoc(location):
     filtered_df = placeNamesCopy[placeNamesCopy['strippedLoc'].apply(lambda x : containsWords(str(x)))]
 
     if filtered_df.empty:
-        return (None, location.find('(') != -1)
+        return (None, bool(re.match(r'^\([^()]+\)$', location)))
 
     Score = pd.DataFrame({
         'string' : filtered_df['0'], 
@@ -244,7 +244,7 @@ def _EditDistanceLoc(location):
     Score['score'] = Score.apply(lambda x : x['score']/containsAllWords(x['stripped_string']), axis=1)
 
     Score = Score.sort_values(by='score')
-    return (Score.iloc[0, 0], location.find('(') != -1)
+    return (Score.iloc[0, 0], bool(re.match(r'^\([^()]+\)$', location)))
 
 
 def punctStrip(text):
@@ -264,7 +264,3 @@ def sortOutput(list):
         list.sort(key=lambda x: x[1])
     return list
 
-def strip(csvTemplatePath):
-    temp = pd.read_csv(csvTemplatePath)
-    stripped = pd.DataFrame(columns=temp.iloc[6, 1:len(temp.columns)])
-    return stripped

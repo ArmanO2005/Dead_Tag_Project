@@ -1,6 +1,8 @@
 #folders
 data/*
+dead_records_data/*
 output/*
+__pycache__/*
 
 #files
 credentials.json
