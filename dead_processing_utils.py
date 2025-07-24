@@ -264,3 +264,7 @@ def sortOutput(list):
         list.sort(key=lambda x: x[1])
     return list
 
+def generate_accession_number(accession_number):
+    year, starting = tuple(accession_number.split('.'))
+    for i in range(int(starting) + 1, 10000):
+        yield f"{year}.{i}"
