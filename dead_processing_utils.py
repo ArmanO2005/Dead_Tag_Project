@@ -202,12 +202,22 @@ def _EditDistanceLoc(location):
     if not location:
         return (None, False)
 
-    continentList = ['africa', 'antarctica', 'asia', 'australia', 'europe', 'north america', 'south america']
+    continentList = ['africa', 'antarctica', 'asia', 'europe', 'north america', 'south america']
 
-    location = location.lower().replace('calif', 'california')
-    wordsInLoc = location.lower().replace(',','').replace('.','').replace('  ', ' ').replace('(', '').replace(')', '').split()
-    if 'usa' in wordsInLoc:
-        wordsInLoc.remove('usa')
+    wordsInLoc = location.lower()
+
+    if wordsInLoc.replace('(', '').replace(')', '') in continentList:
+        return (wordsInLoc.title(), False)
+
+    #common acronyms
+    wordsInLoc = wordsInLoc.replace('s.e. ', 'southeast ').replace('s.w. ', 'southwest ').replace('n.e. ', 'northeast ').replace('n.w. ', 'northwest ')
+    wordsInLoc = wordsInLoc.replace('s. ', 'south ').replace('n. ', 'north ').replace('e. ', 'east ').replace('w. ', 'west ')
+    wordsInLoc = wordsInLoc.replace('usa', 'u.s.a.')
+    wordsInLoc = wordsInLoc.replace('calif', 'california').replace('n.y.', 'new york')
+
+    wordsInLoc = wordsInLoc.replace(',','').replace('.','').replace('  ', ' ').replace('(', '').replace(')', '')
+    print(wordsInLoc)
+    wordsInLoc = wordsInLoc.split()
 
 
     placeNamesCopy = placeNames.copy()
@@ -234,7 +244,16 @@ def _EditDistanceLoc(location):
     filtered_df = placeNamesCopy[placeNamesCopy['strippedLoc'].apply(lambda x : containsWords(str(x)))]
 
     if filtered_df.empty:
-        return (None, bool(re.match(r'^\([^()]+\)$', location)))
+        Score = pd.DataFrame({
+            'string' : placeNamesCopy['0'], 
+            'stripped_string' : placeNamesCopy['strippedLoc'], 
+            'score' : placeNamesCopy['strippedLoc'].apply(lambda x : edit_distance(str(x), location))})
+
+        Score['score'] = Score.apply(lambda x : x['score']/containsAllWords(x['stripped_string']), axis=1)
+
+        Score = Score.sort_values(by='score')
+        return Score
+        # return (Score.iloc[0, 0], bool(re.match(r'^\([^()]+\)$', location)))
 
     Score = pd.DataFrame({
         'string' : filtered_df['0'], 
@@ -244,7 +263,8 @@ def _EditDistanceLoc(location):
     Score['score'] = Score.apply(lambda x : x['score']/containsAllWords(x['stripped_string']), axis=1)
 
     Score = Score.sort_values(by='score')
-    return (Score.iloc[0, 0], bool(re.match(r'^\([^()]+\)$', location)))
+    return Score
+    # return (Score.iloc[0, 0], bool(re.match(r'^\([^()]+\)$', location)))
 
 
 def punctStrip(text):
@@ -268,3 +288,7 @@ def generate_accession_number(accession_number):
     year, starting = tuple(accession_number.split('.'))
     for i in range(int(starting) + 1, 10000):
         yield f"{year}.{i}"
+
+
+
+print(_EditDistanceLoc("S.E.USA"))
