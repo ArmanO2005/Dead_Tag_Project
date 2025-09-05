@@ -33,8 +33,8 @@ def TaxonNoAuthor(data, columnName):
             return text.split()[0]
         return text
 
-    data["binomial_match"] = data[columnName].apply(lambda x: get_first_match(binomialPattern, x.strip().replace('  ', ' ')))
-    data["additions_match"] = data[columnName].apply(lambda x: get_all_matches(additionsPattern, x.strip().replace('  ', ' ')))
+    data["binomial_match"] = data[columnName].apply(lambda x: get_first_match(binomialPattern, str(x).strip().replace('  ', ' ')))
+    data["additions_match"] = data[columnName].apply(lambda x: get_all_matches(additionsPattern, str(x).strip().replace('  ', ' ')))
     data["binomial_match"] = data["binomial_match"].fillna(data[columnName])
     
     for i in range(len(data)):
@@ -43,7 +43,7 @@ def TaxonNoAuthor(data, columnName):
                 data.at[i, "additions_match"] = data.at[i, "additions_match"][1:]
 
     data["***no_author"] = data["binomial_match"] + data["additions_match"].apply(lambda x : ' ' + ' '.join(x))
-    data["***no_author"] = data["***no_author"].apply(lambda x: x.translate(string.punctuation))
+    data["***no_author"] = data["***no_author"].apply(lambda x: str(x).translate(string.punctuation))
     data["***no_author"] = data["***no_author"].apply(lambda x: strip_sp(x).replace('  ', ' ').strip())
 
     return data
@@ -90,6 +90,10 @@ def reformatCol(collector):
     collector = re.sub(r'^[A-Za-z]{2}\.\s+', '', collector)
 
     collector = collector.replace('s.n.', '')
+
+    full_name_pat = r"^[A-Z][a-zA-Z'’-]+ [A-Z][a-zA-Z'’-]+$"
+    if re.match(full_name_pat, collector):
+        return collector.split()[1] + ', ' + collector.split()[0][0] + '.'
 
     parts = re.split(r'\s*&\s*', collector, maxsplit=1)
     first, rest = parts[0], (parts[1] if len(parts) > 1 else None)
@@ -188,11 +192,11 @@ def MatchLocation(data, columnName):
     ***Contains_Paren: whether the location contains a parenthesis
     """
 
-    data[["***DbPlaceGuess", "***Contains_Paren"]] = data[columnName].apply(lambda x : _EditDistanceLoc(str(x))).apply(pd.Series)
+    data[["***DbPlaceGuess", "***Contains_Paren"]] = data[columnName].apply(lambda x : _EditDistanceLoc(str(x)) if x else (None, False)).apply(pd.Series)
 
 
 placeNames = pd.read_csv("data/PlaceName.csv")
-placeNames['strippedLoc'] = placeNames['0'].str.lower().str.replace(',','').str.replace('.','').str.replace('  ', ' ')
+placeNames['strippedLoc'] = placeNames['0'].str.lower().str.replace(',','').str.replace('.','').str.replace('  ', ' ').str.replace('/',' ').str.strip()
 
 def _EditDistanceLoc(location):
     """
@@ -210,20 +214,25 @@ def _EditDistanceLoc(location):
         return (wordsInLoc.title(), False)
 
     #common acronyms
+    wordsInLoc = re.sub(r",(?=\S)", ', ', wordsInLoc)
     wordsInLoc = wordsInLoc.replace('s.e. ', 'southeast ').replace('s.w. ', 'southwest ').replace('n.e. ', 'northeast ').replace('n.w. ', 'northwest ')
+    wordsInLoc = re.sub(r'\bse\s', 'southeast ', wordsInLoc)
+    wordsInLoc = re.sub(r'\bsw\s', 'southwest ', wordsInLoc)
+    wordsInLoc = re.sub(r'\bne\s', 'northeast ', wordsInLoc)
+    wordsInLoc = re.sub(r'\bnw\s', 'northwest ', wordsInLoc)
     wordsInLoc = wordsInLoc.replace('s. ', 'south ').replace('n. ', 'north ').replace('e. ', 'east ').replace('w. ', 'west ')
-    wordsInLoc = wordsInLoc.replace('usa', 'u.s.a.')
+    wordsInLoc = wordsInLoc.replace('so. ', 'south ')
+    wordsInLoc = wordsInLoc.replace('usa', 'u.s.a.').replace('u. s. a.', 'u.s.a.')
     wordsInLoc = wordsInLoc.replace('calif', 'california').replace('n.y.', 'new york')
 
     wordsInLoc = wordsInLoc.replace(',','').replace('.','').replace('  ', ' ').replace('(', '').replace(')', '')
-    print(wordsInLoc)
     wordsInLoc = wordsInLoc.split()
 
-
     placeNamesCopy = placeNames.copy()
-    for cont in continentList:
-        if cont not in location:
-            placeNamesCopy['strippedLoc'] = placeNamesCopy['strippedLoc'].apply(lambda x : x.replace(cont, ''))
+    if not (any(dir in wordsInLoc for dir in ['south', 'west', 'east', 'north', 'southwest', 'southeast', 'northeast', 'northwest', 'trop']) and len(wordsInLoc) < 3):
+        for cont in continentList:
+            if cont not in location:
+                placeNamesCopy['strippedLoc'] = placeNamesCopy['strippedLoc'].apply(lambda x : x.replace(cont, ''))
             
 
     def containsWords(target):
@@ -252,8 +261,8 @@ def _EditDistanceLoc(location):
         Score['score'] = Score.apply(lambda x : x['score']/containsAllWords(x['stripped_string']), axis=1)
 
         Score = Score.sort_values(by='score')
-        return Score
-        # return (Score.iloc[0, 0], bool(re.match(r'^\([^()]+\)$', location)))
+        print(Score)
+        return (Score.iloc[0, 0], bool(re.match(r'^\([^()]+\)$', location)))
 
     Score = pd.DataFrame({
         'string' : filtered_df['0'], 
@@ -263,8 +272,8 @@ def _EditDistanceLoc(location):
     Score['score'] = Score.apply(lambda x : x['score']/containsAllWords(x['stripped_string']), axis=1)
 
     Score = Score.sort_values(by='score')
-    return Score
-    # return (Score.iloc[0, 0], bool(re.match(r'^\([^()]+\)$', location)))
+    print(Score)
+    return (Score.iloc[0, 0], bool(re.match(r'^\([^()]+\)$', location)))
 
 
 def punctStrip(text):
@@ -284,11 +293,5 @@ def sortOutput(list):
         list.sort(key=lambda x: x[1])
     return list
 
-def generate_accession_number(accession_number):
-    year, starting = tuple(accession_number.split('.'))
-    for i in range(int(starting) + 1, 10000):
-        yield f"{year}.{i}"
 
-
-
-print(_EditDistanceLoc("S.E.USA"))
+print(_EditDistanceLoc('Brasil'))
