@@ -5,6 +5,17 @@ from nltk import edit_distance
 import math
 import string
 
+def stripSp(text):
+    pattern = r"(?:\s[Ss][Pp]\s|\s[Ss][Pp]\.|\s[Ss][Ss][Pp]$)"
+    edited = re.sub(pattern, ' ', text)
+    edited = edited.replace('  ', ' ').strip()
+    return edited
+
+def fixSsp(text):
+    pattern = r"(?:\s[Ss][Ss][Pp]\s)"
+    edited = re.sub(pattern, ' subsp. ', text)
+    edited = edited.replace('  ', ' ').strip()
+    return edited
 
 def TaxonNoAuthor(data, columnName):
     """
@@ -29,8 +40,11 @@ def TaxonNoAuthor(data, columnName):
         return matches if matches else []
     
     def strip_sp(text):
-        if len(text.split()) == 2 and ' sp' in text and len(text.split()[1]) < 3:
-            return text.split()[0]
+        pattern = r"(?:\s[Ss][Pp]\s|\s[Ss][Pp]\.)"
+        if ' sp' in text or ' Sp' in text:
+            edited = re.sub(pattern, ' ', text)
+            edited = edited.replace('  ', ' ').strip()
+            return edited
         return text
 
     data["binomial_match"] = data[columnName].apply(lambda x: get_first_match(binomialPattern, str(x).strip().replace('  ', ' ')))
@@ -293,5 +307,3 @@ def sortOutput(list):
         list.sort(key=lambda x: x[1])
     return list
 
-
-print(_EditDistanceLoc('Brasil'))
